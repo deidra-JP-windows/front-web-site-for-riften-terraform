@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Id": "PolicyForCloudFrontLogging",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "identifiers": ["*"],
+        "type": "*"
+      },
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "${logging_bucket_arn}",
+        "${logging_bucket_arn}/*"
+      ]
+    }
+  ]
+}
