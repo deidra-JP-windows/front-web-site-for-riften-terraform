@@ -202,7 +202,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
   }
   
   # AWSのマネージドルール：　OWASPに含まれる基本的でリスクが高く一般的に発生するいくつかの脆弱性に対応する為のルール
-  # ヘッダーやボディー、クッキー、リクエストパス、クエリ引数などの検査
+  # ヘッダーやボディー、クッキー、リクエストパス、クエリパラメーターなどの検査
   # 現在20種類以上項目がある為、下記に詳細が記載されているデベロッパーガイドへのリンクを記載
   # https://docs.aws.amazon.com/ja_jp/waf/latest/developerguide/aws-managed-rule-groups-baseline.html#aws-managed-rule-groups-baseline-crs
   rule {
@@ -253,7 +253,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
   # AWSのマネージドルール： 無効である可能性が高く脆弱性の悪用または発見に関連するリクエストパターンを検査
   # java固有のリクエストヘッダー検査（今回はJavaを使用しない為、割愛）
   # Hostヘッダーにlocalhostを示すパターンがないか、リクエストのHTTPメソッドにPROPFINDがないかを検査
-  # リクエストヘッダー、コンテキスト、URIパス、クエリのLog4j脆弱性検査
+  # リクエストヘッダー、ボディ、URIパス、クエリパラメーターのLog4j脆弱性検査
   rule {
     name     = "rule-4-KnownBadInputsRuleSet"
     priority = 4
@@ -278,7 +278,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
 
   # AWSのマネージドルール： SQLインジェクション攻撃などに対するリクエストパターンを検査
   # サイト側から直接DBを見ることはないが(Lambdaを挟む)、悪意のあるユーザーの洗い出しに使用
-  # クエリ、コンテキスト、ボディー、クッキーヘッダーを検査
+  # クエリパラメーター、ボディー、クッキーヘッダーを検査
   rule {
     name     = "rule-5-SQLiRuleSet"
     priority = 5
@@ -302,7 +302,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
   }
 
   # AWSのマネージドルール： Linux固有の脆弱性の悪用に関連するリクエストパターンを検査（LFI）
-  # リクエストパス、クエリ、cookieヘッダーを剣sな
+  # リクエストパス、クエリパラメーター、cookieヘッダーを検査
   rule {
     name     = "rule-6-LinuxRuleSet"
     priority = 6
@@ -321,6 +321,29 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "wafv2-cf-web-site-LinuxRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # AWSのマネージドルール： WAFが受け取ったIPアドレスを検査しBOTかどうか判断
+  rule {
+    name     = "rule-7-BotControlRuleSet"
+    priority = 7
+
+    override_action {
+      count {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesBotControlRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "wafv2-cf-web-site-BotControlRuleSet"
       sampled_requests_enabled   = true
     }
   }
