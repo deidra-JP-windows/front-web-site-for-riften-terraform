@@ -6,5 +6,5 @@ services:
     container_name: terraform
     volumes:
       - ./terraform:/terraform
-    env_file: .env/.${ENV}.env
+    env_file: ./env/.${ENV}.env
     working_dir: /terraform
