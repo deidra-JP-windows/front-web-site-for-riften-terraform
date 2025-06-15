@@ -1,18 +1,18 @@
 # CloudFront関連のリソース
 module "cloudfront" {
-    source = "../base/00_cloudfront"
-    
+    source = "../00_modules/cloudfront"
+
     region = var.region
-    stage = var.stage
+    env = var.env
     prefix = var.prefix
     ip_set_cloudfront_waf = var.ip_set_cloudfront_waf
 }
 
 # GuardDuty関連のリソース
 module "guardduty" {
-    source = "../base/00_guardduty"
-    
+    source = "../00_modules/guardduty"
+
     region = var.region
-    stage = var.stage
+    env = var.env
     prefix = var.prefix
 }

@@ -1,4 +1,3 @@
 # band_web_server
-band_web_server/env/.dev.env
-band_web_server/.terraform_dev
-# band_web_server/terraform/dev/terraform.tfvars
+band_web_server/env/.stg.env
+band_web_server/env/.prod.env

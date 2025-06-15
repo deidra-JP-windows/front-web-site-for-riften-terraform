@@ -1,8 +1,8 @@
 resource "aws_s3_bucket" "web_site" {
-  bucket = "${var.stage}-${var.prefix}"
+  bucket = "${var.env}-${var.prefix}"
 
   tags = {
-    Stage = ${var.stage}
+    Service = "${var.env}-${var.prefix}"
   }
 }
 
@@ -23,8 +23,33 @@ resource "aws_s3_bucket_public_access_block" "public_access_block" {
   restrict_public_buckets = true
 }
 
+#resource "aws_s3_bucket_lifecycle_configuration" "web_site" {
+#  bucket = aws_s3_bucket.web_site.id
+#
+#  rule {
+#    id      = "assets"
+#    enabled = true
+#
+#    expiration {
+#      days = 365
+#    }
+#
+#    transition {
+#      days          = 93
+#      storage_class = "STANDARD_IA"
+#    }
+#    noncurrent_version_expiration {
+#      days = 1095
+#    }
+#    noncurrent_version_transition {
+#      days          = 365
+#      storage_class = "GLACIER"
+#    }
+#  }
+#}
+
 resource "aws_s3_bucket" "cloudfront_logging" {
-  bucket = "${var.stage}-${var.prefix}-cloudfront-logging"
+  bucket = "${var.env}-${var.prefix}-cloudfront-logging"
   policy = templatefile("${path.module}"/template/logging_policy.json), {
     logging_bucket_arn = aws_s3_bucket.cloudfront_logging.arn
   }
@@ -70,11 +95,11 @@ resource "aws_s3_bucket_public_access_block" "public_access_block_cloudfront_log
 }
 
 resource "aws_cloudfront_origin_access_identity" "web_site" {
-  comment = "${var.stage}-${var.prefix}"
+  comment = "${var.env}-${var.prefix}"
 }
 
 resource "aws_cloudfront_distribution" "web_site" {
-  comment             = "${var.stage}-${var.prefix}"
+  comment             = "${var.env}-${var.prefix}"
   origin {
     domain_name = aws_s3_bucket.web_site.bucket_regional_domain_name
     origin_id   = aws_s3_bucket.web_site.id
@@ -91,7 +116,7 @@ resource "aws_cloudfront_distribution" "web_site" {
   logging_config {
     include_cookies = false
     bucket          = aws_s3_bucket.cloudfront_logging.bucket_domain_name
-    prefix          = "/${var.stage}-${var.prefix}"
+    prefix          = "/${var.env}-${var.prefix}"
   }
 
   default_cache_behavior {
@@ -116,33 +141,34 @@ resource "aws_cloudfront_distribution" "web_site" {
   custom_error_response {
     error_code = "403"
     response_code = "200"
-    response_page_path = "/"
+    response_page_path = "/error/403.html"
     error_caching_min_ttl = "0"
   }
 
   custom_error_response {
     error_code = "404"
     response_code = "200"
-    response_page_path = "/"
+    response_page_path = "/error/404.html"
     error_caching_min_ttl = "0"
   }
 
+/*
   restrictions {
     geo_restriction {
       restriction_type = "whitelist"
       locations        = ["JP"]
     }
   }
-
+*/
   tags = {
-    Environment = "${var.stage}-${var.prefix}"
+    Service = "${var.env}-${var.prefix}"
   }
 
   viewer_certificate {
     cloudfront_default_certificate = true
   }
 
-  web_acl_id = var.stage == "prod" ? aws_wafv2_web_acl.wafv2_web_site[0].arn : 0
+  web_acl_id = var.env == "prod" ? aws_wafv2_web_acl.wafv2_web_site[0].arn : 0
 }
 
 provider "aws" {
@@ -153,20 +179,20 @@ provider "aws" {
 
 resource "aws_wafv2_ip_set" "web_site_ipset" {
   provider           = aws.alias-us-east-1
-  name               = "${var.stage}-${var.prefix}-ip-set"
-  description        = "${var.stage}-${var.prefix}-ip-set"
+  name               = "${var.env}-${var.prefix}-ip-set"
+  description        = "${var.env}-${var.prefix}-ip-set"
   scope              = "CLOUDFRONT"
   ip_address_version = "IPV4"
   addresses          = var.ip_set_cloudfront_waf
 
   tags = {
-    Tag1 = "${var.stage}-${var.prefix}-ip-set"
+    Service = "${var.env}-${var.prefix}"
   }
 }
 
 resource "aws_wafv2_web_acl" "wafv2_web_site" {
   provider    = aws.alias-us-east-1
-  count       = var.stage == "prod" ? 1 : 0
+  count       = var.env == "prod" ? 1 : 0
   name        = "managed-rule-wafv2-cf-web-site"
   description = "managed rule base"
   scope       = "REGIONAL"
@@ -188,7 +214,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
       not_statement {
         statement {
           ip_set_reference_statement {
-            arn = aws_wafv2_web_acl.wafv2_web_site.arn
+            arn = aws_wafv2_ip_set.web_site_ipset.arn
           }
         }
       }
@@ -251,7 +277,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
   }
 
   # AWSのマネージドルール： 無効である可能性が高く脆弱性の悪用または発見に関連するリクエストパターンを検査
-  # java固有のリクエストヘッダー検査（今回はJavaを使用しない為、割愛）
+  # java固有のリクエストヘッダー検査（今回はJavaを使用しない）
   # Hostヘッダーにlocalhostを示すパターンがないか、リクエストのHTTPメソッドにPROPFINDがないかを検査
   # リクエストヘッダー、ボディ、URIパス、クエリパラメーターのLog4j脆弱性検査
   rule {
@@ -349,7 +375,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
   }
 
   tags = {
-    Stage = "${var.stage}-${var.prefix}-cloudfront-waf"
+    Service = "${var.env}-${var.prefix}"
   }
 
   visibility_config {

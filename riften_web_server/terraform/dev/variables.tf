@@ -5,10 +5,10 @@ variable "region" {
  
 variable "prefix" {
   description = "リソースのプレフィックス"
-  default     = "ql_aws"
+  default     = "riften-front-site"
 }
  
-variable "stage" {
+variable "env" {
   description = "プロジェクトの開発ステージ"
   default     = "dev"
 }
