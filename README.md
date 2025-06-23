@@ -1,5 +1,6 @@
 # 概要
 ゲームコミュニティ用ウェブサイトのインフラ部分を実装しています。
+管理対象として当システム全体の構成図を含みます。
 
 ## 構成
 - /front-front-web-site-for-riften-terraform/riften_web_server/terraform/base
