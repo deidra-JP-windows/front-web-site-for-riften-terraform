@@ -3,4 +3,6 @@ variable "region" {}
 variable "env" {}
 variable "prefix" {}
 
-variable "ip_set_cloudfront_waf" {}
+# 固有
+variable "domain_name" {}
+variable "sub_domain_name" {}

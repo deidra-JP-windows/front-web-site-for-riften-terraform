@@ -13,6 +13,16 @@ variable "env" {
   default     = "dev"
 }
 
+variable "domain_name" {
+  description = "プロジェクトのドメイン名"
+  default     = ""
+}
+
+variable "sub_domain_name" {
+  description = "プロジェクトのサブドメイン名"
+  default     = ""
+}
+
 variable "ip_set_cloudfront_waf" {
   description = "WAFホワイトリスト用のIP-set"
 }

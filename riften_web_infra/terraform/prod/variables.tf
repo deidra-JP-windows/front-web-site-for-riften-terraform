@@ -10,7 +10,17 @@ variable "prefix" {
  
 variable "env" {
   description = "プロジェクトの開発ステージ"
-  default     = "dev"
+  default     = "prod"
+}
+
+variable "domain_name" {
+  description = "プロジェクトのドメイン名"
+  default     = "riften.info"
+}
+
+variable "sub_domain_name" {
+  description = "プロジェクトのサブドメイン名"
+  default     = "www.riften.info"
 }
 
 variable "ip_set_cloudfront_waf" {

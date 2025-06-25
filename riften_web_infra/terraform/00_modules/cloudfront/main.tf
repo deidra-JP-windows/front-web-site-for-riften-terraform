@@ -1,16 +1,22 @@
+provider "aws" {
+  version = "~> 6.0"
+  alias   = "alias_us_east_1"
+  region  = "us-east-1"
+}
+
 resource "aws_s3_bucket" "web_site" {
   bucket = "${var.env}-${var.prefix}"
 
   tags = {
-    Service = "${var.env}-${var.prefix}"
+    Service = "${var.prefix}"
   }
 }
 
-resource "aws_s3_bucket_policy" "allow_access_from_OAI" {
+resource "aws_s3_bucket_policy" "allow_access_from_OAC" {
   bucket = aws_s3_bucket.web_site.id
   policy = templatefile("${path.module}"/template/policy.json), {
     bucket_arn = aws_s3_bucket.web_site.arn
-    origin_access_identity = aws_cloudfront_origin_access_identity.web_site.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.web_site.id
   }
 }
 
@@ -23,32 +29,37 @@ resource "aws_s3_bucket_public_access_block" "public_access_block" {
   restrict_public_buckets = true
 }
 
-#resource "aws_s3_bucket_lifecycle_configuration" "web_site" {
-#  bucket = aws_s3_bucket.web_site.id
-#
-#  rule {
-#    id      = "assets"
-#    enabled = true
-#
-#    expiration {
-#      days = 365
-#    }
-#
-#    transition {
-#      days          = 93
-#      storage_class = "STANDARD_IA"
-#    }
-#    noncurrent_version_expiration {
-#      days = 1095
-#    }
-#    noncurrent_version_transition {
-#      days          = 365
-#      storage_class = "GLACIER"
-#    }
-#  }
-#}
+resource "aws_cloudfront_origin_access_control" "web_site" {
+  origin_access_control_origin_type = "s3"
+  origin_access_control_name        = "${var.env}-${var.prefix}"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+
+  # S3バケットへのアクセスを許可するための設定
+  s3_canonical_user_id              = aws_s3_bucket.web_site.owner
+
+  tags = {
+    Service = "${var.prefix}"
+  }
+}
+
+# 365日後にオブジェクトを削除
+resource "aws_s3_bucket_lifecycle_configuration" "web_site" {
+  bucket = aws_s3_bucket.web_site.id
+
+  rule {
+    id      = "assets"
+    status  = "Enabled"
+
+    expiration {
+      days = 365
+    }
+  }
+}
 
 resource "aws_s3_bucket" "cloudfront_logging" {
+  provider = aws.alias_us_east_1
+  count    = var.env == "prod" ? 1 : 0
   bucket = "${var.env}-${var.prefix}-cloudfront-logging"
   policy = templatefile("${path.module}"/template/logging_policy.json), {
     logging_bucket_arn = aws_s3_bucket.cloudfront_logging.arn
@@ -62,7 +73,7 @@ resource "aws_s3_bucket" "cloudfront_logging" {
 
   lifecycle_rule {
     id      = "assets"
-    enabled = true
+    status  = "Enabled"
 
     expiration {
       days = "365" 
@@ -87,6 +98,8 @@ resource "aws_s3_bucket" "cloudfront_logging" {
 }
 
 resource "aws_s3_bucket_public_access_block" "public_access_block_cloudfront_logging" {
+  provider = aws.alias_us_east_1
+  count    = var.env == "prod" ? 1 : 0
   bucket                  = aws_s3_bucket.cloudfront_logging.id
   block_public_acls       = true
   block_public_policy     = true
@@ -94,23 +107,17 @@ resource "aws_s3_bucket_public_access_block" "public_access_block_cloudfront_log
   restrict_public_buckets = true
 }
 
-resource "aws_cloudfront_origin_access_identity" "web_site" {
-  comment = "${var.env}-${var.prefix}"
-}
-
 resource "aws_cloudfront_distribution" "web_site" {
+  provider = aws.alias_us_east_1
   comment             = "${var.env}-${var.prefix}"
   origin {
     domain_name = aws_s3_bucket.web_site.bucket_regional_domain_name
     origin_id   = aws_s3_bucket.web_site.id
 
-    s3_origin_config {
-      origin_access_identity = aws_cloudfront_origin_access_identity.web_site.cloudfront_access_identity_path
-    }
+    origin_access_control_id = aws_cloudfront_origin_access_control.web_site.id
   }
 
   enabled             = true
-  
   default_root_object = "index.html"
 
   logging_config {
@@ -152,33 +159,45 @@ resource "aws_cloudfront_distribution" "web_site" {
     error_caching_min_ttl = "0"
   }
 
-/*
+  # 日本とマレーシア、アイルランド以外の地域からのアクセスを制限
   restrictions {
     geo_restriction {
       restriction_type = "whitelist"
-      locations        = ["JP"]
+      locations        = ["JP", "MY", "IE"]
     }
   }
-*/
+
   tags = {
-    Service = "${var.env}-${var.prefix}"
+    Service = "${var.prefix}"
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn             = var.env == "prod" ? module.acm.cloudfront_cert_arn : null
+    cloudfront_default_certificate   = var.env != "prod"
+    ssl_support_method               = var.env == "prod" ? "sni-only" : null
+    minimum_protocol_version         = var.env == "prod" ? "TLSv1.2_2021" : null
   }
 
   web_acl_id = var.env == "prod" ? aws_wafv2_web_acl.wafv2_web_site[0].arn : 0
 }
 
-provider "aws" {
-  version = "~> 3.9"
-  alias   = "alias-us-east-1"
-  region  = "us-east-1"
+resource "aws_route53_record" "cloudfront_alias" {
+  provider           = aws.alias_us_east_1
+  count              = var.env == "prod" ? 1 : 0
+  zone_id            = aws_route53_zone.zone.id
+  name               = var.sub_domain_name
+  type               = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.web_site.domain_name
+    zone_id                = aws_cloudfront_distribution.web_site.hosted_zone_id
+    evaluate_target_health = false
+  }
 }
 
 resource "aws_wafv2_ip_set" "web_site_ipset" {
-  provider           = aws.alias-us-east-1
+  provider           = aws.alias_us_east_1
+  count              = var.env == "prod" ? 1 : 0
   name               = "${var.env}-${var.prefix}-ip-set"
   description        = "${var.env}-${var.prefix}-ip-set"
   scope              = "CLOUDFRONT"
@@ -186,12 +205,12 @@ resource "aws_wafv2_ip_set" "web_site_ipset" {
   addresses          = var.ip_set_cloudfront_waf
 
   tags = {
-    Service = "${var.env}-${var.prefix}"
+    Service = "${var.prefix}"
   }
 }
 
 resource "aws_wafv2_web_acl" "wafv2_web_site" {
-  provider    = aws.alias-us-east-1
+  provider    = aws.alias_us_east_1
   count       = var.env == "prod" ? 1 : 0
   name        = "managed-rule-wafv2-cf-web-site"
   description = "managed rule base"
@@ -375,7 +394,7 @@ resource "aws_wafv2_web_acl" "wafv2_web_site" {
   }
 
   tags = {
-    Service = "${var.env}-${var.prefix}"
+    Service = "${var.prefix}"
   }
 
   visibility_config {
