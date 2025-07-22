@@ -6,8 +6,8 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-# up
-if [ "$1" = "up" ]; then
+# first-up
+if [ "$1" = "first-up" ]; then
   echo "コンテナを起動します..."
   MSYS_NO_PATHCONV=1 docker run -itd --name front-web-site-for-riften-terraform -v /c/Users/$USERNAME/.ssh:/root/.ssh front-web-site-for-riften-terraform
   MSYS_NO_PATHCONV=1 docker exec -it front-web-site-for-riften-terraform /bin/bash -c "
@@ -15,6 +15,14 @@ if [ "$1" = "up" ]; then
     chmod 600 /root/.ssh/id_ed25519
     chown root:root /root/.ssh/config
     git clone git@github.com:deidra-JP-windows/front-web-site-for-riften-terraform.git
+    cd /front-web-site-for-riften-terraform && exec /bin/bash
+  "
+
+# up
+elif [ "$1" = "up" ]; then
+  echo "コンテナを起動します..."
+  MSYS_NO_PATHCONV=1 docker run -itd --name front-web-site-for-riften-terraform -v /c/Users/$USERNAME/.ssh:/root/.ssh front-web-site-for-riften-terraform
+  MSYS_NO_PATHCONV=1 docker exec -it front-web-site-for-riften-terraform /bin/bash -c "
     cd /front-web-site-for-riften-terraform && exec /bin/bash
   "
 

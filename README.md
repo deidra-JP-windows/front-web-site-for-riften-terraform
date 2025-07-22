@@ -22,7 +22,11 @@
 ### 事前準備
 Windows 11 以上の環境で `git` と `docker` をインストールし、`openssh` で鍵を作成してください。
 ### 開発環境
-以下のコマンドを実行してください。
+以下のコマンドを`Git Bash`環境で実行してください。
+```
+# 初回起動時
+bash build_command.sh first-up
+```
 ```
 # 起動時
 bash build_command.sh up
