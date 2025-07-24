@@ -20,9 +20,12 @@
 
 ## 開発
 ### 事前準備
-Windows 11 以上の環境で `git` と `docker` をインストールし、`openssh` で鍵を作成してください。
+1. Windows 11 以上の環境で `git` と `docker` をインストールし、`openssh` で鍵を作成してください。
+2. VS Code の拡張機能「Dev Containers」をインストールしてください。
+
 ### 開発環境
 以下のコマンドを`Git Bash`環境で実行してください。
+コンテナ起動後、リポジトリを devcontainer で開いてください。
 ```
 # 初回起動時
 bash build_command.sh first-up
@@ -34,6 +37,12 @@ bash build_command.sh up
 ```
 # 接続時
 bash build_command.sh exec
+# 上記のコマンド、または Remote Explorer → Dev Containers からコンテナを選択し、Attach in New Window からコンテナを起動・接続してください。
+```
+```
+# コンテナ停止時
+bash build_command.sh exec
+# 上記のコマンド、または Remote Explorer → Dev Containers からコンテナを選択し、Attach in New Window からコンテナを起動・接続してください。
 ```
 ```
 # イメージ更新時

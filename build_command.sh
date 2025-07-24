@@ -29,6 +29,12 @@ elif [ "$1" = "up" ]; then
 # exec
 elif [ "$1" = "exec" ]; then
   echo "コンテナに接続します..."
+  if [ "$(docker ps -aq -f name=front-web-site-for-riften-terraform)" ] && [ "$(docker ps -q -f name=front-web-site-for-riften-terraform -f status=exited)" ]; then
+    echo "コンテナを再起動します..."
+    MSYS_NO_PATHCONV=1 docker start front-web-site-for-riften-terraform
+  else
+    echo "コンテナはすでに起動しています。"
+  fi
   MSYS_NO_PATHCONV=1 docker exec -it front-web-site-for-riften-terraform /bin/bash -c "cd /front-web-site-for-riften-terraform && exec /bin/bash"
 
 # down
