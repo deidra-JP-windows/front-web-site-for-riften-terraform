@@ -3,9 +3,11 @@
 管理対象として当システム全体の構成図を含みます。
 
 ## 構成
-- /front-front-web-site-for-riften-terraform/riften_web_server/terraform/base
-  - modules
-- a
+- /front-front-web-site-for-riften-terraform/riften_web_infra/terraform/00_modules
+  - モジュールが配置されているディレクトリ
+-  /front-front-web-site-for-riften-terraform/riften_web_infra/terraform/&{ENV}
+  - 環境別のモジュール呼び出し元ディレクトリ
+- 
 
 ## 構成図
 構成図を格納しています。
