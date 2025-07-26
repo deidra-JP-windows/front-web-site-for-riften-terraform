@@ -1,38 +1,31 @@
-# 概要
-ゲームコミュニティ用ウェブサイトのインフラ部分を実装しています。
-管理対象として当システム全体のドキュメントを含みます。
-全体を通して運用に影響がない限りフォーマットや可読性で工数をかけないことを意識しています。
+# プロジェクト概要
+このリポジトリは、ゲームコミュニティ用ウェブサイトのインフラ構築・運用を目的としています。
+AWSを中心としたIaC（Infrastructure as Code）による環境管理、関連ドキュメントの一元管理を行います。
+運用効率・可読性を重視し、必要以上の工数をかけない方針です。
 
-## 構成
-- /front-front-web-site-for-riften-terraform/diagram
-  - ドキュメントをまとめたディレクトリ
-- /front-front-web-site-for-riften-terraform/riften_web_infra/terraform/00_modules
-  - モジュールが配置されているディレクトリ
--  /front-front-web-site-for-riften-terraform/riften_web_infra/terraform/&{ENV}
-  - 環境別のモジュール呼び出し元ディレクトリ
-- /front-front-web-site-for-riften-terraform/riften_web_infra/tools
-  - 開発の tips や雑多な情報などを格納したディレクトリ
-  - 運用には乗らないディレクトリになります
-- /front-front-web-site-for-riften-terraform/build_command.sh
-  - 開発環境のコンテナ設定を操作する際に使用するスクリプト
-- /front-front-web-site-for-riften-terraform/Dockerfile
-  - 開発環境のコンテナ設定が記載されたファイル
+## ディレクトリ・ファイル構成
+- `/diagram/` : システム全体の設計・運用に関するドキュメント（構成図、要件定義書、仕様書等）
+- `/riften_web_infra/terraform/00_modules/` : Terraformモジュール群
+- `/riften_web_infra/terraform/{ENV}/` : 環境別（dev, stg, prod）のTerraform構成
+- `/riften_web_infra/tools/` : 開発Tipsや補助ツール、検証用コード
+- `/build_command.sh` : 開発環境コンテナ操作用スクリプト
+- `/Dockerfile` : 開発環境用Dockerイメージ定義
 
-## ドキュメント
-ドキュメントを格納しています。
-- /front-web-site-for-riften-terraform/diagram/architecture.drawio
-  - アーキテクチャ図
-- /front-web-site-for-riften-terraform/diagram/workflow.md
-  - ワークフロー図
-- /front-web-site-for-riften-terraform/diagram/要件定義書_RIFシステム.md
-  - 要件定義書
-- /front-web-site-for-riften-terraform/diagram/調達仕様書_RIFシステム.md
-  - 調達仕様書
+## ドキュメント一覧
+- `architecture.drawio` : システム全体のアーキテクチャ図
+- `workflow.md` : 業務・システムのワークフロー図
+- `要件定義書_RIFシステム.md` : 業務・機能・非機能要件の整理
+- `調達仕様書_RIFシステム.md` : 調達・契約関連仕様
 
-## 開発
-### 事前準備
-1. Windows 11 以上の環境で `git` と `docker` をインストールし、`openssh` で鍵を作成してください。
-2. VS Code の拡張機能`Dev Containers`をインストールしてください。
+## 開発環境セットアップ
+### 必要な環境・ツール
+- OS: Windows 11 以上（Mac/Linuxも可）
+- 必須: `wsl`, `git`, `docker`, `openssh`（鍵作成）
+- 推奨: VS Code（拡張機能「Dev Containers」）
+
+### VS Code拡張機能（推奨）
+- Draw.io Integration : VS Code上でDraw.io編集
+- Markdown Preview Mermaid Support : Mermaid記法プレビュー
 
 ### 外部の拡張機能
 効率的な開発を行う為、個人開発の拡張機能で以下の2つを採用しています。
@@ -141,3 +134,22 @@ terraform deploy -var-file=terraform.tfvars
 cd /front-web-site-for-riften-terraform/riften_web_server/terraform/{ENV}
 terraform destroy -var-file=terraform.tfvarss
 ```
+
+## FAQ（よくある質問）
+Q. Windows以外でも開発できますか？
+A. 開発環境コンテナ操作用スクリプトが Windows 用のパス指定になっている為、 Mac/Linux 環境は未対応です。
+
+Q. Dev Containersが起動しない場合は？
+A. Docker Desktopの再起動やVS Codeの再起動をお試しください。
+
+Q. SSH鍵の作成方法は？
+A. `ssh-keygen -t ed25519` で作成できます。
+
+Q. Terraformのバージョンは？
+A. 各環境の`provider.tf`を参照してください。
+
+Q. コマンドが失敗する場合は？
+A. コンテナの状態（起動/停止）を確認し、必要に応じて`build_command.sh`を実行してください。
+
+## サポート・問い合わせ
+不明点や要望はGitHub Issuesまたは担当者までご連絡ください。
