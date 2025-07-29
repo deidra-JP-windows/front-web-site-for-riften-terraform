@@ -1,7 +1,7 @@
 ```mermaid
 sequenceDiagram
   participant U as ユーザ
-  participant F as フロントサイト
+  participant F as フロントサイト / スマホアプリ
   participant L as Lambda認証
   participant BE as バックエンド(Lambda)
   participant S as S3
