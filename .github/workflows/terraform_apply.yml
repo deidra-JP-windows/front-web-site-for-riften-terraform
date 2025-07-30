@@ -3,6 +3,8 @@ name: Terraform Apply
 on:
   push:
     branches: [main]
+    paths:
+      - 'riften_web_infra/terraform/prod/**'
 
 jobs:
   terraform-apply:
