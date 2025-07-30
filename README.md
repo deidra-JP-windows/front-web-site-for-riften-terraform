@@ -174,8 +174,19 @@ A. コンテナの状態（起動/停止）を確認し、必要に応じて`bui
 ## サポート・問い合わせ
 不明点や要望はGitHub Issuesまたは担当者までご連絡ください。
 
-## GitHub運用方針
+## CI/CD（GitHub Actions）
+### CI（継続的インテグレーション）
+- **Secret Scan（.github/workflows/secret_scan.yml）**
+  - developブランチへのPull Request作成・更新時に、Terraformディレクトリ配下のAWSキーやパスワード等の機密情報をgrepで検出し、見つかった場合はCIを失敗させます。
+  - コード内にシークレット情報が混入していないか自動チェックします。
 
+### CD（継続的デリバリー）
+- **Terraform Apply（.github/workflows/terraform_apply.yml）**
+  - mainブランチの`riften_web_infra/terraform/prod`配下に変更があった場合のみ、GitHub Actions上でTerraformのinit/plan/applyを自動実行します。
+  - AWS認証情報はGitHub Secretsから取得し、CI環境で安全にapplyします。
+  - 本番環境への自動反映を担うワークフローです。
+
+## GitHub運用方針
 - **Collaborators and teams** で許可したユーザーのみWrite権限を付与し、不要なユーザーのpush権限を制限します。
 - **rulesetの導入**により、以下のブランチ保護・セキュリティ強化を実施します。
   - mainブランチへの直接push禁止（必ずPull Request経由）
