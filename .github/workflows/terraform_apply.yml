@@ -10,7 +10,6 @@ jobs:
   terraform-apply:
     runs-on: ubuntu-latest
     environment: prod
-    working-directory: /front-web-site-for-riften-terraform/riften_web_infra/terraform/prod
     steps:
       - uses: actions/checkout@v4
 
@@ -21,12 +20,15 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: /front-web-site-for-riften-terraform/riften_web_infra/terraform/prod
 
       - name: Terraform Plan
         run: terraform plan
+        working-directory: /front-web-site-for-riften-terraform/riften_web_infra/terraform/prod
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
+        working-directory: /front-web-site-for-riften-terraform/riften_web_infra/terraform/prod
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -97,6 +97,7 @@ github に差分をプッシュする際には git-flow を簡略化し運用し
 | develop        | dev 環境へリリースするブランチ                     | ○               | main              | -  |
 | feature/*      | 作業ブランチ（ローカル・dev 環境での動作確認も実施） | ×               | develop           | develop            |
 
+
 ### ブランチ運用フロー
 Mermaid 記法のため必要に応じて VS Code に拡張機能をインストールしてください。
 例：Markdown Preview Mermaid
@@ -107,9 +108,11 @@ gitGraph
    commit id: "develop作業"
    branch feature/xxx
    commit id: "feature作業"
+   %% PR作成時にCI（Secret Scan）が自動実行される
    checkout develop
    merge feature/xxx
    commit id: "developマージ"
+   %% develop→mainマージ時にCD（Terraform Apply）が自動実行される
    checkout main
    merge develop
    branch release
@@ -120,6 +123,11 @@ gitGraph
    checkout main
    merge hotfix
 ```
+
+#### GitHub Actions連携ポイント
+- `feature/*` → `develop` へのPR作成・更新時：CI（Secret Scan）が自動実行され、機密情報混入をチェック
+- `develop` → `main` へのマージ時：CD（Terraform Apply）が自動実行され、本番環境へ反映
+  - それ以外のブランチ操作では自動実行されません
 
 ### コミットメッセージ
 関数単位や同じ修正内容のまとまり単位でコミットしてください。
@@ -155,6 +163,38 @@ cd /front-web-site-for-riften-terraform/riften_web_server/terraform/{ENV}
 terraform destroy -var-file=terraform.tfvarss
 ```
 
+## CI/CD（GitHub Actions）
+
+### CI（継続的インテグレーション）
+- **Secret Scan（.github/workflows/secret_scan.yml）**
+  - developブランチへのPull Request作成・更新時に、Terraformディレクトリ配下のAWSキーやパスワード等の機密情報をgrepで検出し、見つかった場合はCIを失敗させます。
+  - コード内にシークレット情報が混入していないか自動チェックします。
+  - 誤検知を防ぐため、AWSリソース名に近いパターンは除外しています。
+
+### CD（継続的デリバリー）
+- **Terraform Apply（.github/workflows/terraform_apply.yml）**
+  - mainブランチの`riften_web_infra/terraform/prod`配下に変更があった場合のみ、GitHub Actions上でTerraformのinit/plan/applyを自動実行します。
+  - AWS認証情報はGitHub Secretsから取得し、CI環境で安全にapplyします。
+  - 本番環境への自動反映を担うワークフローです。
+  - applyはmainブランチへのpush時のみ自動実行され、PR作成時には実行されません。
+
+#### 補足
+GitHub Actionsは、CI（コード品質・セキュリティチェック）とCD（本番反映）を分離して運用しています。Terraformのapplyは本番環境のみ自動化し、PR作成時は手動検証を推奨しています。
+
+## GitHub運用方針
+- **Collaborators and teams** で許可したユーザーのみWrite権限を付与し、不要なユーザーのpush権限を制限します。
+- **rulesetの導入**により、以下のブランチ保護・セキュリティ強化を実施します。
+  - mainブランチへの直接push禁止（必ずPull Request経由）
+  - Pull Request必須・レビュー必須（例: 1名以上の承認）
+    - コードオーナーによるレビューのみ
+  - force push禁止
+  - 必須ステータスチェック（CI等の成功を必須化）
+    - 必要に応じて追加
+    - Terraform コマンドは基本手打ちで実行する想定（Github Actions の実行に料金が発生する、PR作成前に確認してほしい等）
+  - シークレットスキャン（漏洩防止）
+    - CI により実装
+これらの設定により、リポジトリの安全性・品質を担保します。
+
 ## FAQ（よくある質問）
 Q. Windows以外でも開発できますか？
 A. 開発環境コンテナ操作用スクリプトが Windows 用のパス指定になっている為、 Mac/Linux 環境は未対応です。
@@ -173,30 +213,3 @@ A. コンテナの状態（起動/停止）を確認し、必要に応じて`bui
 
 ## サポート・問い合わせ
 不明点や要望はGitHub Issuesまたは担当者までご連絡ください。
-
-## CI/CD（GitHub Actions）
-### CI（継続的インテグレーション）
-- **Secret Scan（.github/workflows/secret_scan.yml）**
-  - developブランチへのPull Request作成・更新時に、Terraformディレクトリ配下のAWSキーやパスワード等の機密情報をgrepで検出し、見つかった場合はCIを失敗させます。
-  - コード内にシークレット情報が混入していないか自動チェックします。
-
-### CD（継続的デリバリー）
-- **Terraform Apply（.github/workflows/terraform_apply.yml）**
-  - mainブランチの`riften_web_infra/terraform/prod`配下に変更があった場合のみ、GitHub Actions上でTerraformのinit/plan/applyを自動実行します。
-  - AWS認証情報はGitHub Secretsから取得し、CI環境で安全にapplyします。
-  - 本番環境への自動反映を担うワークフローです。
-
-## GitHub運用方針
-- **Collaborators and teams** で許可したユーザーのみWrite権限を付与し、不要なユーザーのpush権限を制限します。
-- **rulesetの導入**により、以下のブランチ保護・セキュリティ強化を実施します。
-  - mainブランチへの直接push禁止（必ずPull Request経由）
-  - Pull Request必須・レビュー必須（例: 1名以上の承認）
-    - コードオーナーによるレビューのみ
-  - force push禁止
-  - 必須ステータスチェック（CI等の成功を必須化）
-    - 必要に応じて追加
-    - Terraform コマンドは基本手打ちで実行する想定（Github Actions の実行に料金が発生する、PR作成前に確認してほしい等）
-  - シークレットスキャン（漏洩防止）
-    - CI により実装
-
-これらの設定により、リポジトリの安全性・品質を担保します。
