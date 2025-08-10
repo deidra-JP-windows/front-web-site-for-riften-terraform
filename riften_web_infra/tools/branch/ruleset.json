@@ -3,7 +3,7 @@
   "name": "common",
   "target": "branch",
   "source_type": "Repository",
-  "source": "deidra-JP-windows/front-web-site-for-riften-terraform",
+  "source": "deidra-JP-windows/ris-infra-core",
   "enforcement": "active",
   "conditions": {
     "ref_name": {
@@ -40,5 +40,11 @@
       }
     }
   ],
-  "bypass_actors": []
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ]
 }
