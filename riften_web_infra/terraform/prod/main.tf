@@ -6,6 +6,7 @@ module "cloudfront" {
     env = var.env
     prefix = var.prefix
     ip_set_cloudfront_waf = var.ip_set_cloudfront_waf
+    lambda_backend_url = var.lambda_backend_url
 }
 
 # GuardDuty関連のリソース

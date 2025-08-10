@@ -4,25 +4,75 @@ provider "aws" {
   region  = "us-east-1"
 }
 
-resource "aws_s3_bucket" "web_site" {
-  bucket = "${var.env}-${var.prefix}"
-
-  tags = {
-    Service = "${var.prefix}"
-  }
+resource "aws_s3_bucket" "info_site" {
+  bucket = "${var.env}-${var.prefix}-info"
+  tags = { Service = "${var.prefix}-info" }
 }
 
-resource "aws_s3_bucket_policy" "allow_access_from_OAC" {
-  bucket = aws_s3_bucket.web_site.id
-  policy = templatefile("${path.module}"/template/policy.json), {
-    bucket_arn = aws_s3_bucket.web_site.arn
-    origin_access_control_id = aws_cloudfront_origin_access_control.web_site.id
-  }
+resource "aws_s3_bucket" "front_site" {
+  bucket = "${var.env}-${var.prefix}-front"
+  tags = { Service = "${var.prefix}-front" }
 }
 
-resource "aws_s3_bucket_public_access_block" "public_access_block" {
-  bucket = aws_s3_bucket.web_site.id
+resource "aws_s3_bucket" "data_store" {
+  bucket = "${var.env}-${var.prefix}-data"
+  tags = { Service = "${var.prefix}-data" }
+}
 
+resource "aws_s3_bucket_policy" "allow_access_from_OAC_info" {
+  bucket = aws_s3_bucket.info_site.id
+  policy = templatefile("${path.module}/template/policy.json", {
+    bucket_arn = aws_s3_bucket.info_site.arn
+    origin_access_control_id = aws_cloudfront_origin_access_control.info_site.id
+  })
+}
+resource "aws_s3_bucket_public_access_block" "public_access_block_info" {
+  bucket = aws_s3_bucket.info_site.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "allow_access_from_OAC_front" {
+  bucket = aws_s3_bucket.front_site.id
+  policy = templatefile("${path.module}/template/policy.json", {
+    bucket_arn = aws_s3_bucket.front_site.arn
+    origin_access_control_id = aws_cloudfront_origin_access_control.front_site.id
+  })
+}
+resource "aws_s3_bucket_public_access_block" "public_access_block_front" {
+  bucket = aws_s3_bucket.front_site.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "allow_access_from_OAC_data" {
+  bucket = aws_s3_bucket.data_store.id
+  policy = templatefile("${path.module}/template/policy.json", {
+    bucket_arn = aws_s3_bucket.data_store.arn
+    origin_access_control_id = aws_cloudfront_origin_access_control.data_store.id
+  })
+}
+resource "aws_s3_bucket_public_access_block" "public_access_block_data" {
+  bucket = aws_s3_bucket.data_store.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_policy" "allow_access_from_OAC_logging" {
+  bucket = aws_s3_bucket.cloudfront_logging.id
+  policy = templatefile("${path.module}/template/policy.json", {
+    bucket_arn = aws_s3_bucket.cloudfront_logging.arn
+    origin_access_control_id = null
+  })
+}
+resource "aws_s3_bucket_public_access_block" "public_access_block_logging" {
+  bucket = aws_s3_bucket.cloudfront_logging.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -34,13 +84,26 @@ resource "aws_cloudfront_origin_access_control" "web_site" {
   origin_access_control_name        = "${var.env}-${var.prefix}"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
+  s3_canonical_user_id              = aws_s3_bucket.info_site.owner
+  tags = { Service = "${var.prefix}-info" }
+}
 
-  # S3バケットへのアクセスを許可するための設定
-  s3_canonical_user_id              = aws_s3_bucket.web_site.owner
+resource "aws_cloudfront_origin_access_control" "front_site" {
+  origin_access_control_origin_type = "s3"
+  origin_access_control_name        = "${var.env}-${var.prefix}-front"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+  s3_canonical_user_id              = aws_s3_bucket.front_site.owner
+  tags = { Service = "${var.prefix}-front" }
+}
 
-  tags = {
-    Service = "${var.prefix}"
-  }
+resource "aws_cloudfront_origin_access_control" "data_store" {
+  origin_access_control_origin_type = "s3"
+  origin_access_control_name        = "${var.env}-${var.prefix}-data"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+  s3_canonical_user_id              = aws_s3_bucket.data_store.owner
+  tags = { Service = "${var.prefix}-data" }
 }
 
 # 365日後にオブジェクトを削除
@@ -109,16 +172,64 @@ resource "aws_s3_bucket_public_access_block" "public_access_block_cloudfront_log
 
 resource "aws_cloudfront_distribution" "web_site" {
   provider = aws.alias_us_east_1
-  comment             = "${var.env}-${var.prefix}"
+  comment  = "${var.env}-${var.prefix}"
+  enabled  = true
+  default_root_object = "index.html"
   origin {
-    domain_name = aws_s3_bucket.web_site.bucket_regional_domain_name
-    origin_id   = aws_s3_bucket.web_site.id
-
-    origin_access_control_id = aws_cloudfront_origin_access_control.web_site.id
+    domain_name = aws_s3_bucket.info_site.bucket_regional_domain_name
+    origin_id   = aws_s3_bucket.info_site.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.info_site.id
+  }
+  origin {
+    domain_name = aws_s3_bucket.front_site.bucket_regional_domain_name
+    origin_id   = aws_s3_bucket.front_site.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.front_site.id
+  }
+  # Lambda Function URLオリジン（API Gatewayを使わずCloudFrontからのみアクセス）
+  origin {
+    domain_name = var.lambda_backend_url
+    origin_id   = "lambda-backend"
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+    }
+    origin_shield {
+      enabled              = false
+    }
   }
 
-  enabled             = true
-  default_root_object = "index.html"
+  cache_behavior {
+    path_pattern     = "/info/*"
+    target_origin_id = aws_s3_bucket.info_site.id
+    allowed_methods  = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD"]
+    viewer_protocol_policy = "redirect-to-https"
+    compress = true
+  }
+  cache_behavior {
+    path_pattern     = "/front/*"
+    target_origin_id = aws_s3_bucket.front_site.id
+    allowed_methods  = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD"]
+    viewer_protocol_policy = "redirect-to-https"
+    compress = true
+  }
+  # Lambda Function URLへのcache_behavior例
+  cache_behavior {
+    path_pattern     = "/api/*"
+    target_origin_id = "lambda-backend"
+    allowed_methods  = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+    cached_methods   = ["GET", "HEAD"]
+    viewer_protocol_policy = "redirect-to-https"
+    compress = true
+    # 必要に応じてオリジンリクエストポリシーやキャッシュポリシーを追加
+    # origin_request_policy_id = aws_cloudfront_origin_request_policy.api_policy.id
+    # cache_policy_id = aws_cloudfront_cache_policy.api_cache.id
+  }
+  # default_cache_behaviorはinfo_siteまたはfront_siteに割り当て
+
+  # ...既存のlogging_config, custom_error_response, restrictions, tags, viewer_certificate, web_acl_id等はそのまま...
 
   logging_config {
     include_cookies = false
