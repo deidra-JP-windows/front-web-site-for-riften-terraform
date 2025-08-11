@@ -55,6 +55,41 @@
 ## 可用性は？
 - 月1h停止くらいで収めたい
 - SLA = 99.5% で
+
+## SLA / SLO / SLI
+
+- **SLA（Service Level Agreement／サービスレベル合意）**  
+  - 可用性99.5%を保証する。
+- **SLO（Service Level Objective／サービスレベル目標）**  
+  - 可用性99.7%以上を目標とする（SLAより高めに設定）。
+- **SLI（Service Level Indicator／サービスレベル指標）**  
+  - CloudFrontの標準アクセスログをJSON形式でS3に出力し、パーティションは`YYYY/MM/DD`で日次分割。
+  - 監視頻度は週1回とし、過去のログデータは一週間ごとに削除。
+  - 週次バッチでAthenaクエリを実行し、可用性（例：HTTP 2xx/3xx応答率）を集計。
+  - クエリ結果はExcel形式でS3に保存し、必要に応じてExcelのスクリーンショットを共有（Excelが開けない場合の配慮）。
+  - 例: Athenaクエリ
+    ```sql
+    SELECT
+      date_trunc('day', request_time) AS day,
+      COUNT(*) AS total_requests,
+      SUM(CASE WHEN status_code BETWEEN 200 AND 399 THEN 1 ELSE 0 END) AS success_requests,
+      ROUND(100.0 * SUM(CASE WHEN status_code BETWEEN 200 AND 399 THEN 1 ELSE 0 END) / COUNT(*), 2) AS availability_percent
+    FROM
+      cloudfront_logs_json_partitioned
+    WHERE
+      year = '2025'
+    GROUP BY
+      day
+    ORDER BY
+      day;
+    ```
+  - この結果をもとに、SLO/SLAの達成状況を定期的に確認する。
+
+### SLI詳細・監視運用方針
+- **アベイラビリティSLI**: `(2xx + 3xx) / 全リクエスト`
+- **レイテンシSLI**: パーセンタイル（例: p95, p99）で「レスポンス1秒以下の割合」を評価する案もあるが、今回は「1秒以下のリクエスト / 全体リクエスト」とする。
+- **監視・可視化**: 本来はQuickSightやDataDog, NewRelic等の統合監視サービスでリアルタイム可視化・アラートが望ましいが、低コスト運用を優先し、Athena＋Excel＋手動/スクショ共有で対応。
+- **アラート運用**: 5xx系・4xx系エラーが全体リクエストの5割を超えた場合、最低限の対応としてDiscordにアラート通知を行う。
 ## 期間は？
 - 開発期間は6か月を目途
   - 6人月を当該コミュニティ管理者とその他ユーザで分割する
