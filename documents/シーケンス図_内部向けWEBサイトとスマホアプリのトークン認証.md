@@ -8,7 +8,9 @@ sequenceDiagram
   participant S_FRONT as S3_FRONT（内部向け）
   participant S_DATA as S3_DATA（データストア）
   participant D as Discordサーバ
-  participant B as バッチ(Lambda)
+  participant B as データ収集バッチ(Lambda)
+  participant SLI_B as SLI可視化バッチ
+  participant DIS_B as Discord通知バッチ
   U->>F: ログイン要求
   F->>L: 認証
   L-->>F: トークン発行
@@ -24,4 +26,7 @@ sequenceDiagram
   B->>D: Discordデータ収集（週1回）
   D-->>B: 投稿データ返却
   B->>S_DATA: データ保存（バッチ投入）
+  SLI_B->>S_DATA: CloudFrontログ/SLIデータ取得
+  SLI_B->>DIS_B: SLI集計結果を通知（閾値超過時）
+  DIS_B->>D: Discord APIでアラート通知
 ```
