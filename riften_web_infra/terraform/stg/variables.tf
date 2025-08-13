@@ -32,3 +32,10 @@ variable "lambda_backend_url" {
   description = "CloudFrontオリジンに設定するLambda Function URL (APIバックエンド)"
   type        = string
 }
+
+# Lambda@Edge認証LambdaのARN
+variable "auth_lambda_edge_arn" {
+  description = "CloudFrontのdefault_cache_behaviorに紐付けるLambda@Edge認証LambdaのARN (バージョン付き)"
+  type        = string
+  default     = ""
+}

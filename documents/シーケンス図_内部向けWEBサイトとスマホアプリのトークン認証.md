@@ -20,7 +20,7 @@ sequenceDiagram
   CF-->>User: 表示
   %% コミュニティユーザのフロントサイト利用
   Member->>CF: フロントサイトアクセス
-  CF->>AuthLambda: トークン認証
+  CF->>AuthLambda: 全behaviorでトークン認証
   AuthLambda-->>CF: 認証OK/NG
   CF->>FrontS3: 認証OK時のみ静的コンテンツ取得
   FrontS3-->>CF: 静的コンテンツ返却
