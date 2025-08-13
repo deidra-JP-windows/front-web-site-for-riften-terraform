@@ -33,9 +33,22 @@ variable "lambda_backend_url" {
   type        = string
 }
 
-# Lambda@Edge認証LambdaのARN
-variable "auth_lambda_edge_arn" {
-  description = "CloudFrontのdefault_cache_behaviorに紐付けるLambda@Edge認証LambdaのARN (バージョン付き)"
+
+# Lambda@Edge認証Lambda ZIPファイルパス
+variable "auth_lambda_zip_path" {
+  description = "Lambda@Edge認証LambdaのZIPファイルパス (us-east-1用)"
   type        = string
-  default     = ""
+}
+
+# Lambda@Edge認証LambdaのIAMロールARN
+variable "auth_lambda_role_arn" {
+  description = "Lambda@Edge認証Lambdaに割り当てるIAMロールのARN (us-east-1)"
+  type        = string
+}
+
+# トークン値
+variable "auth_token" {
+  description = "認証トークン値 (Lambda@Edgeの環境変数)"
+  type        = string
+  default     = "dummy-token"
 }
