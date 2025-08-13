@@ -7,6 +7,9 @@ module "cloudfront" {
     prefix = var.prefix
     ip_set_cloudfront_waf = var.ip_set_cloudfront_waf
     lambda_backend_url = var.lambda_backend_url
+    auth_lambda_zip_path = var.auth_lambda_zip_path
+    auth_lambda_role_arn = var.auth_lambda_role_arn
+    auth_token           = var.auth_token
 }
 
 # GuardDuty関連のリソース

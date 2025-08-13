@@ -29,6 +29,7 @@
 
 ### 3.5 認証・認可
 - 利用する認証方式：
+    - CloudFrontの全behavior（/info/*, /front/*, /api/*, default）でLambda@Edge認証Lambdaによるトークン認証を実施
 
 ### 3.6 SLA/SLO/SLI
 - SLA：99.5%

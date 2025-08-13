@@ -4,6 +4,42 @@ provider "aws" {
   region  = "us-east-1"
 }
 
+# Lambda@Edge認証Lambda（トークン認証）
+resource "aws_lambda_function" "auth_token" {
+  filename         = var.auth_lambda_zip_path
+  function_name    = "${var.env}-${var.prefix}-auth-token"
+  role             = var.auth_lambda_role_arn
+  handler          = "main.lambda_handler"
+  runtime          = "python3.12"
+  publish          = true
+  source_code_hash = filebase64sha256(var.auth_lambda_zip_path)
+  environment {
+    variables = {
+      AUTH_TOKEN = var.auth_token
+    }
+  }
+  # Lambda@Edgeはus-east-1固定
+  provider = aws.alias_us_east_1
+}
+
+# Lambda@Edge用のバージョン固定エイリアス
+resource "aws_lambda_alias" "auth_token_live" {
+  name             = "live"
+  function_name    = aws_lambda_function.auth_token.function_name
+  function_version = aws_lambda_function.auth_token.version
+  provider         = aws.alias_us_east_1
+}
+
+# Lambda@Edge用のCloudFront実行許可
+resource "aws_lambda_permission" "allow_cloudfront" {
+  statement_id  = "AllowExecutionFromCloudFront"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.auth_token.arn
+  principal     = "edgelambda.amazonaws.com"
+  qualifier     = aws_lambda_function.auth_token.version
+  provider      = aws.alias_us_east_1
+}
+
 resource "aws_s3_bucket" "info_site" {
   bucket = "${var.env}-${var.prefix}-info"
   tags = { Service = "${var.prefix}-info" }
@@ -206,6 +242,11 @@ resource "aws_cloudfront_distribution" "web_site" {
     cached_methods   = ["GET", "HEAD"]
     viewer_protocol_policy = "redirect-to-https"
     compress = true
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_alias.auth_token_live.arn
+      include_body = false
+    }
   }
   cache_behavior {
     path_pattern     = "/front/*"
@@ -214,6 +255,11 @@ resource "aws_cloudfront_distribution" "web_site" {
     cached_methods   = ["GET", "HEAD"]
     viewer_protocol_policy = "redirect-to-https"
     compress = true
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_alias.auth_token_live.arn
+      include_body = false
+    }
   }
   # Lambda Function URLへのcache_behavior例
   cache_behavior {
@@ -223,6 +269,11 @@ resource "aws_cloudfront_distribution" "web_site" {
     cached_methods   = ["GET", "HEAD"]
     viewer_protocol_policy = "redirect-to-https"
     compress = true
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_alias.auth_token_live.arn
+      include_body = false
+    }
     # 必要に応じてオリジンリクエストポリシーやキャッシュポリシーを追加
     # origin_request_policy_id = aws_cloudfront_origin_request_policy.api_policy.id
     # cache_policy_id = aws_cloudfront_cache_policy.api_cache.id
@@ -254,6 +305,13 @@ resource "aws_cloudfront_distribution" "web_site" {
     min_ttl                = 0
     default_ttl            = 3600
     max_ttl                = 86400
+
+    # Lambda@Edge認証Lambdaをオリジンリクエストで紐付け
+    lambda_function_association {
+      event_type   = "origin-request"
+      lambda_arn   = aws_lambda_alias.auth_token_live.arn
+      include_body = false
+    }
   }
 
   custom_error_response {
