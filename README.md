@@ -77,8 +77,7 @@ bash build_command.sh exec
 ```
 ```
 # コンテナ停止時
-bash build_command.sh exec
-# 上記のコマンド、または Remote Explorer → Dev Containers からコンテナを選択し、Attach in New Window からコンテナを起動・接続してください。
+bash build_command.sh stop
 ```
 ```
 # イメージ更新時

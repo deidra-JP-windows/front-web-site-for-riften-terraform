@@ -38,6 +38,13 @@ elif [ "$1" = "exec" ]; then
   fi
   MSYS_NO_PATHCONV=1 docker exec -it ris-infra-core /bin/bash -c "cd /ris-infra-core && exec /bin/bash"
 
+
+# stop
+elif [ "$1" = "stop" ]; then
+  echo "コンテナを停止します..."
+  docker stop ris-infra-core
+
+
 # down
 elif [ "$1" = "down" ]; then
   echo "コンテナを停止して削除します..."
